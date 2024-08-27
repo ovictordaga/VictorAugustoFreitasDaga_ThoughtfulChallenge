@@ -14,7 +14,10 @@ class PayloadManager:
         self.payload_data = payload_data
 
     def get_search_phrase(self, index=0):
-        return self.payload_data[index]["search_phrase"]
+        if index < len(self.payload_data):
+            return self.payload_data[index]["search_phrase"]
+        else:
+            raise IndexError("Index out of range for payload data.")
 
     def get_news_category(self, index=0):
         return self.payload_data[index]["news_category_section_topic"]
@@ -159,21 +162,30 @@ class NewsScraper:
     def contains_money(self, title, description):
         """Check if the title or description contains any amount of money."""
         money_regex = r"(\$\d{1,3}(,\d{3})*(\.\d{2})?)|(\d+(\.\d{2})?\s*(USD|dollars?))"
-        return bool(re.search(money_regex, title)) or (description and re.search(money_regex, description))
+        
+        # Check if the title contains money
+        if re.search(money_regex, title):
+            return True
+        
+        # Check if the description contains money
+        if description and re.search(money_regex, description):
+            return True
+        
+        return False
 
-def save_to_excel(news_items):
+
+def save_to_excel(news_items, append=False):
     """Save the news items to an Excel file."""
     excel = Files()
-    excel.create_workbook("output/news_data.xlsx")
     
-    # Create a worksheet
-    excel.create_worksheet("News Data")
+    if append and os.path.exists("output/news_data.xlsx"):
+        excel.open_workbook("output/news_data.xlsx")
+    else:
+        excel.create_workbook("output/news_data.xlsx")
+        excel.create_worksheet("News Data")
+        headers = ["Title", "Date", "Description", "Picture Filename", "Count of Search Phrases", "Contains Money"]
+        excel.append_rows_to_worksheet([headers], "News Data")
     
-    # Define the headers
-    headers = ["Title", "Date", "Description", "Picture Filename", "Count of Search Phrases", "Contains Money"]
-    excel.append_rows_to_worksheet([headers], "News Data")
-    
-    # Append the news items as rows
     for item in news_items:
         row = [
             item["title"],
@@ -181,11 +193,10 @@ def save_to_excel(news_items):
             item["description"],
             item["picture_filename"],
             item["phrase_count"],
-            item["contains_money"]  # This will now be either True or False
+            item["contains_money"]
         ]
         excel.append_rows_to_worksheet([row], "News Data")
     
-    # Save the workbook
     excel.save_workbook()
 
 @task
@@ -199,14 +210,13 @@ def thoughtful_maestro_python():
     apply_filters(payload_manager.get_news_category())
     time.sleep(5)
 
-    # Calculate the target date based on the period
     period_months = payload_manager.get_period()
     target_date = datetime.now() - timedelta(days=period_months * 30)
 
-    # Scrape news items across pages
     all_news_items = []
-    page_number = 1  # Track the page number to help with debugging
-    first_page = True  # Flag to track if it's the first page
+    page_number = 1
+    first_page = True
+    items_counter = 0  # Counter for tracking the number of items
 
     while True:
         print(f"Scraping page {page_number}...")
@@ -214,22 +224,24 @@ def thoughtful_maestro_python():
         news_items, should_continue = scrape_news(payload_manager.get_search_phrase(), target_date)
 
         if first_page and news_items:
-            # Check if the first news item is outside the desired period
             first_news_date = re.sub(r'\b(\w{3})\.\s', r'\1 ', news_items[0]['date'])
-            print(first_news_date)
             first_news_datetime = datetime.strptime(first_news_date, "%b %d, %Y")
-            print(first_news_datetime)
-            print(target_date)
             if first_news_datetime < target_date:
                 print("Warning: No news items found within the specified period.")
-                return  # Exit without saving anything
+                return
         
         all_news_items.extend(news_items)
+        items_counter += len(news_items)
+
+        # Save items for every 10 items collected
+        if items_counter >= 10:
+            save_to_excel(all_news_items, append=True)
+            all_news_items.clear()  # Clear the list after saving
+            items_counter = 0  # Reset the counter after saving
 
         if not should_continue:
             break
 
-        # Locate the "Next" button within the 'search-results-module-next-page' class and click it
         try:
             page = browser.page()
             next_button = page.query_selector("div.search-results-module-next-page a")
@@ -237,18 +249,20 @@ def thoughtful_maestro_python():
                 next_button.click()
                 time.sleep(5)
                 page.wait_for_load_state("load")
-                page_number += 1  # Increment the page number after a successful navigation
+                page_number += 1
             else:
                 print("No more pages found.")
-                break  # No more pages to navigate
+                break
         except Exception as e:
             print(f"Failed to navigate to the next page: {e}")
             break
         
-        first_page = False  # Reset the flag after the first page
+        first_page = False
 
-    # Save the scraped news items to an Excel file
-    save_to_excel(all_news_items)
+    # Save any remaining items after finishing the loop
+    if all_news_items:
+        save_to_excel(all_news_items, append=True)
+
 
 def receive_payload():
     collected_data = []
@@ -291,7 +305,11 @@ def apply_filters(category):
         
         if category:
             checkbox_xpath = f"//span[text()='{category}']/preceding::input[@type='checkbox'][1]"
+            page.wait_for_load_state("load")
             page.check(checkbox_xpath)
+            time.sleep(10)
+            page.wait_for_load_state("load")
+            
             print(f"Category '{category}' selected successfully.")
         else:
             print("No category specified, only 'Newest' option selected.")
