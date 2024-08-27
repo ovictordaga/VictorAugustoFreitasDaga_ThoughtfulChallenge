@@ -199,6 +199,11 @@ def save_to_excel(news_items, append=False):
     
     excel.save_workbook()
 
+    work_items = WorkItems()
+    work_items.get_input_work_item()    
+    work_items.create_output_work_item(variables={"output_file": "output/news_data.xlsx"})
+    work_items.save_output_work_item()
+
 @task
 def thoughtful_maestro_python():
     """Main task to scrape news data and save it to Excel."""
@@ -262,6 +267,8 @@ def thoughtful_maestro_python():
     # Save any remaining items after finishing the loop
     if all_news_items:
         save_to_excel(all_news_items, append=True)
+    
+
 
 
 def receive_payload():
