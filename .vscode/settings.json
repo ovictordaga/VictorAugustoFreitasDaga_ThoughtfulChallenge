@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "/Users/victor.freitas/thoughtfulMaestro/."
+    ],
+    "python.terminal.activateEnvironment": false
+}
