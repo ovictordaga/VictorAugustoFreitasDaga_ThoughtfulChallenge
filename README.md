@@ -1,60 +1,75 @@
-# Template: Python - Minimal
 
-This template leverages the new [Python framework](https://github.com/robocorp/robocorp), the [libraries](https://github.com/robocorp/robocorp/blob/master/docs/README.md#python-libraries) from to same project as well.
+# Thoughtful AI - Tech Challenge by Victor Augusto Freitas Daga
 
-The template provides you with the basic structure of a Python project: logging out of the box and controlling your tasks without fiddling with the base Python stuff. The environment contains the most used libraries, so you do not have to start thinking about those right away. 
+## Overview
 
-👉 Other templates are available as well via our tooling and on our [Portal](https://robocorp.com/portal/tag/template)
+This project is part of a technical challenge for Thoughtful AI, aiming to showcase the ability to automate the process of extracting data from a news site. The automation is built using Robocorp and is designed to streamline tedious but essential business processes through Robotic Process Automation (RPA).
 
-## Running
+## The Challenge
 
-#### VS Code
-1. Get [Robocorp Code](https://robocorp.com/docs/developer-tools/visual-studio-code/extension-features) -extension for VS Code.
-1. You'll get an easy-to-use side panel and powerful command-palette commands for running, debugging, code completion, docs, etc.
+The objective of this challenge is to build a bot that can:
 
-#### Command line
+1. **Extract Data from a News Site**: Automate the process of navigating the site, performing searches, and gathering relevant news articles.
+2. **Store Data**: Save the extracted information in an organized manner, preferably in an Excel file, stored in the `/output` directory so that it is accessible in the Robocorp Control Room artifacts list.
+3. **Implement Additional Features**:
+   - Count the occurrences of the search phrases within the articles.
+   - Detect and extract monetary amounts mentioned in the content.
+4. **Deploy and Test**: Push the code to this GitHub repository and create a Robocorp Control Room process. Ensure that the process has a successful run before submission.
 
-1. [Get RCC](https://github.com/robocorp/rcc?tab=readme-ov-file#getting-started)
-1. Use the command: `rcc run`
+## Setup Instructions
 
-## Results
+### Prerequisites
 
-🚀 After running the bot, check out the `log.html` under the `output` -folder.
+- Robocorp Lab installed.
+- Python environment set up with necessary dependencies.
+- A Robocorp Control Room account.
 
-## Dependencies
+### Installation
 
-We strongly recommend getting familiar with adding your dependencies in [conda.yaml](conda.yaml) to control your Python dependencies and the whole Python environment for your automation.
+1. **Clone this Repository:**
+   ```bash
+   git clone https://github.com/ovictordaga/VictorAugustoFreitasDaga_ThoughtfulChallenge.git
+   ```
+2. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Set Up in Robocorp Lab:**
+   - Open the project in Robocorp Lab.
+   - Ensure all dependencies are correctly installed.
 
-<details>
-  <summary>🙋‍♂️ "Why not just pip install...?"</summary>
+## Usage
 
-Think of [conda.yaml](conda.yaml) as an equivalent of the requirements.txt, but much better. 👩‍💻 With `conda.yaml`, you are not just controlling your PyPI dependencies; you control the complete Python environment, which makes things repeatable and easy.
+### Running Locally
 
-👉 You will probably need to run your code on another machine quite soon, so by using `conda.yaml`:
-- You can avoid `Works on my machine` -cases
-- You do not need to manage Python installations on all the machines
-- You can control exactly which version of Python your automation will run on 
-  - You'll also control the pip version to avoid dep. resolution changes
-- No need for venv, pyenv, ... tooling and knowledge sharing inside your team.
-- Define dependencies in conda.yaml, let our tooling do the heavy lifting.
-- You get all the content of [conda-forge](https://prefix.dev/channels/conda-forge) without any extra tooling
+You can test the bot locally using the following command:
 
-> Dive deeper with [these](https://github.com/robocorp/rcc/blob/master/docs/recipes.md#what-is-in-condayaml) resources.
+```bash
+rcc run
+```
 
-</details>
-<br/>
+### Deploying to Robocorp Control Room
 
-> The full power of [rpaframework](https://robocorp.com/docs/python/rpa-framework) -libraries is also available on Python as a backup while we implement the new Python libraries.
+1. **Push to GitHub:**
+   Ensure that your latest code is pushed to this repository.
 
-## What now?
+2. **Create a Process in Robocorp Control Room:**
+   - Create a new process in Robocorp Control Room linked to this GitHub repository.
+   - Define parameters such as `search_phrase`, `news_category`, and `time_period`.
 
-🚀 Now, go get'em
+3. **Execute the Process:**
+   Run the process from Robocorp Control Room, ensuring a successful run.
 
-Start writing Python and remember that the AI/LLM's out there are getting really good and creating Python code specifically.
+4. **Submission:**
+   Once the process has successfully run, invite `Challenges@thoughtfulautomation.com` to your Robocorp Org to review the solution.
 
-👉 Try out [Robocorp ReMark 💬](https://chat.robocorp.com)
+## Project Structure
 
-For more information, do not forget to check out the following:
-- [Robocorp Documentation -site](https://robocorp.com/docs)
-- [Portal for more examples](https://robocorp.com/portal)
-- Follow our main [robocorp -repository](https://github.com/robocorp/robocorp) as it is the main location where we developed the libraries and the framework.
+- **`tasks.py`**: Main script containing the bot logic, including payload management and news scraping functionality.
+- **`/output`**: Directory where the extracted data will be stored.
+
+
+
+## License
+
+This project is licensed under the MIT License.
