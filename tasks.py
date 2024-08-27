@@ -27,6 +27,7 @@ def thoughtful_maestro_python():
     
     open_the_news_website()
     input_search_phrase(payload_manager.get_search_phrase())
+    apply_filters(payload_manager.get_news_category())
     time.sleep(10)
     # Additional tasks using payload_manager...
 
@@ -45,7 +46,7 @@ def open_the_news_website():
     """Navigates to the given URL and waits for the search button to load"""
     try:
         page = browser.page()
-        page.goto("https://www.latimes.com/", timeout=60000)
+        page.goto("https://www.latimes.com/", wait_until="load")
         # Instead of waiting for the full page load, just wait for the specific element
         page.wait_for_selector("xpath=//button[@data-element='search-button']", timeout=10000)
         print("Search button is loaded.")
@@ -57,6 +58,33 @@ def input_search_phrase(search_phrase):
     page = browser.page()
     page.click("xpath=//button[@data-element='search-button']")
     page.fill("xpath=//input[@data-element='search-form-input']", search_phrase)
+    page.click("xpath=//button[@data-element='search-submit-button']")
+    page.wait_for_load_state("load")
+
+def apply_filters(category):
+    """Apply filters for the search with error handling"""
+    page = browser.page()
+    
+    try:
+        # Always select the "Newest" option from the dropdown
+        page.select_option("select[name='s']", "1")  # Value "1" corresponds to "Newest"
+        
+        # Check if the category is not empty
+        if category:
+            # Attempt to find and check the checkbox for the specified category
+            checkbox_xpath = f"//span[text()='{category}']/preceding::input[@type='checkbox'][1]"
+            page.check(checkbox_xpath)
+            print(f"Category '{category}' selected successfully.")
+        else:
+            print("No category specified, only 'Newest' option selected.")
+    
+    except Exception as e:
+        # Handle the error if the category does not exist or is not found
+        print(f"Error: The category '{category}' could not be found or selected. Exception: {e}")
+    
+
+
+
 
 def log_in():
     """Fills in the login form and clicks the 'Log in' button"""
