@@ -5,6 +5,9 @@ from RPA.Excel.Files import Files
 from RPA.PDF import PDF
 from robocorp import workitems
 import time
+import re
+import os
+import re
 
 class PayloadManager:
     def __init__(self, payload_data):
@@ -19,9 +22,109 @@ class PayloadManager:
     def get_period(self, index=0):
         return self.payload_data[index]["period"]
 
+class NewsScraper:
+    def __init__(self, page, search_phrase):
+        self.page = page
+        self.search_phrase = search_phrase.lower()
+
+    def get_news_items(self):
+        """Extract all news items from the page."""
+        news_items = []
+        articles = self.page.query_selector_all("li > ps-promo")  # Select all promo elements inside <li> tags
+        
+        for article in articles:
+            title = self.get_title(article)
+            date = self.get_date(article)
+            description = self.get_description(article)
+            picture_filename = self.download_image(article, title)
+            phrase_count = self.count_search_phrases(title, description)
+            contains_money = self.contains_money(title, description)
+            
+            news_items.append({
+                "title": title,
+                "date": date,
+                "description": description,
+                "picture_filename": picture_filename,
+                "phrase_count": phrase_count,
+                "contains_money": contains_money
+            })
+        
+        return news_items
+
+    def get_title(self, article):
+        """Extract the title of the news article."""
+        title_element = article.query_selector("h3.promo-title > a")
+        return title_element.inner_text().strip() if title_element else "No Title Found"
+
+    def get_date(self, article):
+        """Extract the date of the news article."""
+        date_element = article.query_selector("p.promo-timestamp")
+        return date_element.inner_text().strip() if date_element else "No Date Found"
+
+    def get_description(self, article):
+        """Extract the description of the news article."""
+        description_element = article.query_selector("p.promo-description")
+        return description_element.inner_text().strip() if description_element else "No Description Found"
+
+    def sanitize_filename(self, title):
+        """Sanitize the title to create a valid filename."""
+        filename = re.sub(r'[^a-zA-Z0-9_\-]', '_', title)  # Replace invalid characters with underscores
+        return filename[:50]  # Truncate to avoid overly long filenames
+
+    def download_image(self, article, title):
+        """Download the image associated with the news article."""
+        image_element = article.query_selector("img")
+        if image_element:
+            image_url = image_element.get_attribute("src")
+            image_filename = self.sanitize_filename(title) + os.path.splitext(image_url)[-1]
+            http = HTTP()
+            http.download(image_url, f"output/{image_filename}")
+            return image_filename
+        return "No Image Found"
+
+    def count_search_phrases(self, title, description):
+        """Count the occurrences of the search phrase in title and description."""
+        phrase_count = title.lower().count(self.search_phrase)
+        if description:
+            phrase_count += description.lower().count(self.search_phrase)
+        return phrase_count
+
+    def contains_money(self, title, description):
+        """Check if the title or description contains any amount of money."""
+        money_regex = r"(\$\d{1,3}(,\d{3})*(\.\d{2})?)|(\d+(\.\d{2})?\s*(USD|dollars?))"
+        return bool(re.search(money_regex, title)) or (description and re.search(money_regex, description))
+
+def save_to_excel(news_items):
+    """Save the news items to an Excel file."""
+    excel = Files()
+    excel.create_workbook("output/news_data.xlsx")
+    
+    # Create a worksheet
+    excel.create_worksheet("News Data")
+    
+    # Define the headers
+    headers = ["Title", "Date", "Description", "Picture Filename", "Count of Search Phrases", "Contains Money"]
+    excel.append_rows_to_worksheet([headers], "News Data")
+    
+    # Append the news items as rows
+    for item in news_items:
+        row = [
+            item["title"],
+            item["date"],
+            item["description"],
+            item["picture_filename"],
+            item["phrase_count"],
+            item["contains_money"]
+        ]
+        excel.append_rows_to_worksheet([row], "News Data")
+    
+    # Save the workbook
+    excel.save_workbook()
+
+
 @task
 def thoughtful_maestro_python():
-    """Insert the sales data for the week and export it as a PDF"""
+    """Main task to scrape news data and save it to Excel."""
     browser.configure(slowmo=100)
     payload_manager = PayloadManager(receive_payload())
     
@@ -29,7 +132,12 @@ def thoughtful_maestro_python():
     input_search_phrase(payload_manager.get_search_phrase())
     apply_filters(payload_manager.get_news_category())
     time.sleep(10)
-    # Additional tasks using payload_manager...
+
+    # Scrape news items
+    news_items = scrape_news(payload_manager.get_search_phrase())
+
+    # Save the scraped news items to an Excel file
+    save_to_excel(news_items)
 
 def receive_payload():
     collected_data = []
@@ -47,7 +155,6 @@ def open_the_news_website():
     try:
         page = browser.page()
         page.goto("https://www.latimes.com/", wait_until="load")
-        # Instead of waiting for the full page load, just wait for the specific element
         page.wait_for_selector("xpath=//button[@data-element='search-button']", timeout=10000)
         print("Search button is loaded.")
     except Exception as e:
@@ -66,12 +173,9 @@ def apply_filters(category):
     page = browser.page()
     
     try:
-        # Always select the "Newest" option from the dropdown
         page.select_option("select[name='s']", "1")  # Value "1" corresponds to "Newest"
         
-        # Check if the category is not empty
         if category:
-            # Attempt to find and check the checkbox for the specified category
             checkbox_xpath = f"//span[text()='{category}']/preceding::input[@type='checkbox'][1]"
             page.check(checkbox_xpath)
             print(f"Category '{category}' selected successfully.")
@@ -79,10 +183,13 @@ def apply_filters(category):
             print("No category specified, only 'Newest' option selected.")
     
     except Exception as e:
-        # Handle the error if the category does not exist or is not found
         print(f"Error: The category '{category}' could not be found or selected. Exception: {e}")
-    
 
+def scrape_news(search_phrase):
+    """Scrape news data from the page."""
+    page = browser.page()
+    scraper = NewsScraper(page, search_phrase)
+    return scraper.get_news_items()
 
 
 
